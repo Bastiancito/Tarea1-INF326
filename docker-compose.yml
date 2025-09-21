@@ -1,0 +1,114 @@
+version: "3.9"
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: mq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build: ./services/api
+    container_name: api
+    ports:
+      - "8000:8000"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8000/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build: .
+    image: quake-app
+    container_name: quake_app_build
+    command: ["sleep","infinity"]   
+    depends_on:
+      api:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  sub_arica:
+    image: quake-app
+    command: ["python", "-m", "messaging.subscriber"]
+    environment:
+      CITY_NAME: "Arica"
+      CITY_LAT: "-18.4783"
+      CITY_LON: "-70.3126"
+      AMQP_HOST: "rabbitmq"
+      HTTP_BASE: "http://api:8000"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      app:
+        condition: service_started
+
+  sub_coquimbo:
+    image: quake-app
+    command: ["python", "-m", "messaging.subscriber"]
+    environment:
+      CITY_NAME: "Coquimbo"
+      CITY_LAT: "-29.9533"
+      CITY_LON: "-71.3436"
+      AMQP_HOST: "rabbitmq"
+      HTTP_BASE: "http://api:8000"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      app:
+        condition: service_started
+
+  sub_valparaiso:
+    image: quake-app
+    command: ["python", "-m", "messaging.subscriber"]
+    environment:
+      CITY_NAME: "Valparaíso"
+      CITY_LAT: "-33.0360"
+      CITY_LON: "-71.6296"
+      AMQP_HOST: "rabbitmq"
+      HTTP_BASE: "http://api:8000"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      app:
+        condition: service_started
+
+  sub_concepcion:
+    image: quake-app
+    command: ["python", "-m", "messaging.subscriber"]
+    environment:
+      CITY_NAME: "Concepción"
+      CITY_LAT: "-36.8260"
+      CITY_LON: "-73.0490"
+      AMQP_HOST: "rabbitmq"
+      HTTP_BASE: "http://api:8000"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      app:
+        condition: service_started
+
+  sub_punta_arenas:
+    image: quake-app
+    command: ["python", "-m", "messaging.subscriber"]
+    environment:
+      CITY_NAME: "Punta Arenas"
+      CITY_LAT: "-53.1638"
+      CITY_LON: "-70.9171"
+      AMQP_HOST: "rabbitmq"
+      HTTP_BASE: "http://api:8000"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      app:
+        condition: service_started

@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+pika
+httpx
+pydantic
+geopy
+python-dotenv
+loguru
