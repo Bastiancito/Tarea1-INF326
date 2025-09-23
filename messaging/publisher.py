@@ -20,8 +20,16 @@ def publish_message(body: dict):
     params = pika.ConnectionParameters(host=AMQP_HOST, port=AMQP_PORT, credentials=creds)
     conn = pika.BlockingConnection(params)
     ch = conn.channel()
-    ch.queue_declare(queue=AMQP_QUEUE, durable=True)
-    ch.basic_publish(exchange='', routing_key=AMQP_QUEUE, body=json.dumps(body), properties=pika.BasicProperties(delivery_mode=2))
+
+    exchange_name = "quakes"
+    ch.exchange_declare(exchange=exchange_name, exchange_type='fanout', durable=True)
+
+    ch.basic_publish(
+        exchange=exchange_name,
+        routing_key='',
+        body=json.dumps(body),
+        properties=pika.BasicProperties(delivery_mode=2)
+    )
     conn.close()
 
 
@@ -38,12 +46,13 @@ def main():
             return
     else:
         now = int(time.time())
+
         body = {
-            "id": f"test-{now}",
+            "id": "us-2025abcd",
             "lat": -33.45,
             "lon": -70.66,
-            "origen": "TEST",
-            "mag": 4.2,
+            "origen": "USGS",
+            "mag": 5.9,
             "time": now,
         }
 

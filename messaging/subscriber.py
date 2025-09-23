@@ -22,7 +22,7 @@ CITY_LAT = float(os.getenv("CITY_LAT", "-33.0360"))
 CITY_LON = float(os.getenv("CITY_LON", "-71.6296"))
 
 
-def on_msg(ch, method, props, body):
+def on_msg(ch, method, body):
 	try:
 		ev = json.loads(body)
 	except Exception as e:
@@ -63,23 +63,31 @@ def connect_with_retry(max_attempts=10):
 
 
 if __name__ == "__main__":
-	print(f"[{CITY_NAME}] Starting subscriber. Connecting to AMQP={AMQP_HOST}:{AMQP_PORT}, HTTP={HTTP_BASE}, UMBRAL={UMBRAL_KM}km")
-	conn = connect_with_retry(max_attempts=int(os.getenv("AMQP_CONNECT_RETRIES", "12")))
-	if conn is None:
-		print(f"[{CITY_NAME}] Failed to connect to RabbitMQ after retries. Exiting.")
-		sys.exit(1)
+    print(f"[{CITY_NAME}] Booting subscriber… UMBRAL={UMBRAL_KM} km (HTTP={HTTP_BASE})", flush=True)
 
-	ch = conn.channel()
-	ch.queue_declare(queue=AMQP_QUEUE, durable=True)
-	ch.basic_qos(prefetch_count=1)
-	ch.basic_consume(queue=AMQP_QUEUE, on_message_callback=on_msg)
+    creds = pika.PlainCredentials(AMQP_USER, AMQP_PASS)
+    params = pika.ConnectionParameters(host=AMQP_HOST, port=AMQP_PORT, credentials=creds)
 
-	print(f"[{CITY_NAME}] Esperando sismos… UMBRAL={UMBRAL_KM} km (HTTP={HTTP_BASE})")
-	try:
-		ch.start_consuming()
-	except KeyboardInterrupt:
-		print(f"[{CITY_NAME}] Interrupted, closing connection")
-		try:
-			conn.close()
-		except Exception:
-			pass
+    for attempt in range(1, 31):
+        try:
+            conn = pika.BlockingConnection(params)
+            break
+        except Exception as e:
+            print(f"[{CITY_NAME}] AMQP connection failed (try {attempt}/30): {e}", flush=True)
+            time.sleep(1)
+    else:
+        raise SystemExit(f"[{CITY_NAME}] Could not connect to RabbitMQ")
+
+    ch = conn.channel()
+    exchange_name = "quakes"
+    ch.exchange_declare(exchange=exchange_name, exchange_type='fanout', durable=True)
+
+
+    queue_name = f"quakes.{CITY_NAME.replace(' ','_')}"
+    ch.queue_declare(queue=queue_name, durable=True)
+    ch.queue_bind(exchange=exchange_name, queue=queue_name)
+
+    ch.basic_qos(prefetch_count=1)
+    ch.basic_consume(queue=queue_name, on_message_callback=on_msg)
+    print(f"[{CITY_NAME}] Ready. Waiting for messages…", flush=True)
+    ch.start_consuming()

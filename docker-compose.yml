@@ -42,8 +42,8 @@ services:
     command: ["python", "-m", "messaging.subscriber"]
     environment:
       CITY_NAME: "Arica"
-      CITY_LAT: "-18.4783"
-      CITY_LON: "-70.3126"
+      CITY_LAT: "-18.4746"
+      CITY_LON: "-70.29792"
       AMQP_HOST: "rabbitmq"
       HTTP_BASE: "http://api:8000"
     depends_on:
@@ -57,8 +57,8 @@ services:
     command: ["python", "-m", "messaging.subscriber"]
     environment:
       CITY_NAME: "Coquimbo"
-      CITY_LAT: "-29.9533"
-      CITY_LON: "-71.3436"
+      CITY_LAT: "-29.95332"
+      CITY_LON: "-71.33947"
       AMQP_HOST: "rabbitmq"
       HTTP_BASE: "http://api:8000"
     depends_on:
@@ -72,8 +72,8 @@ services:
     command: ["python", "-m", "messaging.subscriber"]
     environment:
       CITY_NAME: "Valparaíso"
-      CITY_LAT: "-33.0360"
-      CITY_LON: "-71.6296"
+      CITY_LAT: "-33.036"
+      CITY_LON: "-71.62963"
       AMQP_HOST: "rabbitmq"
       HTTP_BASE: "http://api:8000"
     depends_on:
@@ -87,8 +87,8 @@ services:
     command: ["python", "-m", "messaging.subscriber"]
     environment:
       CITY_NAME: "Concepción"
-      CITY_LAT: "-36.8260"
-      CITY_LON: "-73.0490"
+      CITY_LAT: "-36.82699"
+      CITY_LON: "-73.04977"
       AMQP_HOST: "rabbitmq"
       HTTP_BASE: "http://api:8000"
     depends_on:
@@ -102,8 +102,8 @@ services:
     command: ["python", "-m", "messaging.subscriber"]
     environment:
       CITY_NAME: "Punta Arenas"
-      CITY_LAT: "-53.1638"
-      CITY_LON: "-70.9171"
+      CITY_LAT: "-53.16282"
+      CITY_LON: "-70.90922"
       AMQP_HOST: "rabbitmq"
       HTTP_BASE: "http://api:8000"
     depends_on:

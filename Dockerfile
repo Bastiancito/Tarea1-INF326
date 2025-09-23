@@ -7,3 +7,5 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 COPY tools /app/tools
 COPY messaging /app/messaging
 
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
