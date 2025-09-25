@@ -1,13 +1,18 @@
 from fastapi import FastAPI, HTTPException
+from typing import Dict
 
 app = FastAPI(title="Datos Sismos (in-memory)")
 
-DB = {
+DB: Dict[str, dict] = {
     "us-2025abcd": {
         "id":"us-2025abcd","origen":"USGS","lat":-33.45,"lon":-70.66,
         "mag":5.9,"prof_km":80,"zona":"RM","reporte":"Sismo sentido..."
     }
 }
+
+@app.get("/quakes")
+def list_quakes():
+    return list(DB.values())
 
 @app.get("/quakes/{qid}")
 def get_quake(qid: str):
