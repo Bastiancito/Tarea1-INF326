@@ -26,7 +26,7 @@ def on_msg(ch, method, properties, body):
     try:
         ev = json.loads(body.decode("utf-8"))
     except Exception as e:
-        print(f"[{CITY_NAME}] Invalid message body: {e}")
+        print(f"[{CITY_NAME}] ❌ Mensaje inválido: {e}")
         ch.basic_ack(delivery_tag=method.delivery_tag)
         return
 
@@ -36,14 +36,14 @@ def on_msg(ch, method, properties, body):
     lon = ev.get("lon")
 
     if qid is None or lat is None or lon is None:
-        print(f"[{CITY_NAME}] Missing keys in event (need id, lat, lon): {ev}")
+        print(f"[{CITY_NAME}] ⚠️ Faltan claves en el evento (se requieren id, lat, lon): {ev}")
         ch.basic_ack(delivery_tag=method.delivery_tag)
         return
 
     try:
         d = distancia_km(CITY_LAT, CITY_LON, float(lat), float(lon))
     except Exception as e:
-        print(f"[{CITY_NAME}] Distance error: {e} | ev={ev}")
+        print(f"[{CITY_NAME}] ❌ Error calculando distancia: {e} | evento={ev}")
         ch.basic_ack(delivery_tag=method.delivery_tag)
         return
 
@@ -52,15 +52,16 @@ def on_msg(ch, method, properties, body):
             r = httpx.get(f"{HTTP_BASE}/quakes/{qid}", timeout=5.0)
             if r.status_code == 200:
                 detail = r.json()
-                print(f"[{CITY_NAME}] Interesa (dist={d:.1f}km): {detail.get('id')}")
+                print(f"[{CITY_NAME}] ✅ Sismo relevante (dist={d:.1f} km): {detail.get('id')}")
             else:
-                print(f"[{CITY_NAME}] Detalle no disponible (HTTP {r.status_code}): {qid}")
+                print(f"[{CITY_NAME}] ⚠️ Detalle no disponible (HTTP {r.status_code}): {qid}")
         except Exception as e:
-            print(f"[{CITY_NAME}] Error HTTP: {e}")
+            print(f"[{CITY_NAME}] ❌ Error en consulta HTTP: {e}")
     else:
-        print(f"[{CITY_NAME}] Ignorado (dist={d:.1f}km) > {UMBRAL_KM}km")
+        print(f"[{CITY_NAME}] Ignorado (dist={d:.1f} km > {UMBRAL_KM} km)")
 
     ch.basic_ack(delivery_tag=method.delivery_tag)
+
 
 def connect_with_retry(max_attempts=30):
     creds = pika.PlainCredentials(AMQP_USER, AMQP_PASS)
@@ -70,16 +71,17 @@ def connect_with_retry(max_attempts=30):
             return pika.BlockingConnection(params)
         except Exception as e:
             wait = min(2 ** attempt, 30)
-            print(f"[{CITY_NAME}] AMQP connect {attempt}/{max_attempts} failed: {e}. Retrying in {wait}s")
+            print(f"[{CITY_NAME}] 🔄 Conexión AMQP fallida {attempt}/{max_attempts}: {e}. Reintentando en {wait}s")
             time.sleep(wait)
     return None
 
+
 if __name__ == "__main__":
-    print(f"[{CITY_NAME}] Booting subscriber… UMBRAL={UMBRAL_KM} km (HTTP={HTTP_BASE})", flush=True)
+    print(f"[{CITY_NAME}] 🚀 Iniciando suscriptor… UMBRAL={UMBRAL_KM} km (HTTP={HTTP_BASE})", flush=True)
 
     conn = connect_with_retry()
     if conn is None:
-        raise SystemExit(f"[{CITY_NAME}] Could not connect to RabbitMQ")
+        raise SystemExit(f"[{CITY_NAME}] ❌ No se pudo conectar a RabbitMQ")
 
     ch = conn.channel()
     # fanout para broadcast de sismos
@@ -92,5 +94,5 @@ if __name__ == "__main__":
     ch.basic_qos(prefetch_count=1)
     ch.basic_consume(queue=queue_name, on_message_callback=on_msg)
 
-    print(f"[{CITY_NAME}] Ready. Waiting for messages…", flush=True)
+    print(f"[{CITY_NAME}] ✅ Listo. Esperando mensajes…", flush=True)
     ch.start_consuming()
