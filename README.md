@@ -37,3 +37,4 @@ El “Back of the Envelope” se puede usar para hacer cuentas rápidas que ayud
 - Con esas cifras, pensar si un solo broker de RabbitMQ y un API en memoria son suficientes, o si habría que escalar a más instancias, usar base de datos o balanceo de carga.
 
 **En resumen:** con estos cálculos rápidos puedo justificar que la arquitectura actual es adecuada para el volumen esperado, y también identificar en qué punto sería necesario reforzarla si la cantidad de sismos o suscriptores creciera mucho.
+
