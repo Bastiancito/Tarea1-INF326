@@ -1,7 +1,7 @@
 ## Tarea 1- INF326 - “Arquitectura de Software” 
 Autores
 * Bastían Camus 202173013-3
-* Esteban Castillo
+* Esteban Castillo 202073087-3
 * Matías Fernández 202173108-3
 ## Instrucciones ejecución de tarea:
 
