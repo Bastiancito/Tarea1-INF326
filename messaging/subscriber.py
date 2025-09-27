@@ -4,25 +4,17 @@ import time
 import pika
 import httpx
 from dotenv import load_dotenv
-from tools.geo import distancia_km
+from messaging.utils import distancia_km
+from messaging.config import AMQP_HOST, AMQP_PORT, AMQP_USER, AMQP_PASS, EXCHANGE_NAME, UMBRAL_KM
 
 load_dotenv()
 
-AMQP_HOST = os.getenv("AMQP_HOST", "rabbitmq")
-AMQP_PORT = int(os.getenv("AMQP_PORT", "5672"))
-AMQP_USER = os.getenv("AMQP_USER", "guest")
-AMQP_PASS = os.getenv("AMQP_PASS", "guest")
 HTTP_BASE = os.getenv("HTTP_BASE", "http://api:8000")
-UMBRAL_KM = float(os.getenv("UMBRAL_KM", "500"))
-
 CITY_NAME = os.getenv("CITY_NAME", "Valparaíso")
 CITY_LAT = float(os.getenv("CITY_LAT", "-33.0360"))
 CITY_LON = float(os.getenv("CITY_LON", "-71.6296"))
 
-EXCHANGE_NAME = "quakes"
-
-def on_msg(ch, method, properties, body):
-    # body: bytes -> str -> dict
+def on_msg(ch, method, _properties, body):
     try:
         ev = json.loads(body.decode("utf-8"))
     except Exception as e:
@@ -30,7 +22,6 @@ def on_msg(ch, method, properties, body):
         ch.basic_ack(delivery_tag=method.delivery_tag)
         return
 
-    # Esperamos claves: id, lat, lon
     qid = ev.get("id")
     lat = ev.get("lat")
     lon = ev.get("lon")
@@ -47,18 +38,46 @@ def on_msg(ch, method, properties, body):
         ch.basic_ack(delivery_tag=method.delivery_tag)
         return
 
+
     if d <= UMBRAL_KM:
+        detail = None
         try:
             r = httpx.get(f"{HTTP_BASE}/quakes/{qid}", timeout=5.0)
             if r.status_code == 200:
                 detail = r.json()
-                print(f"[{CITY_NAME}] ✅ Sismo relevante (dist={d:.1f} km): {detail.get('id')}")
             else:
-                print(f"[{CITY_NAME}] ⚠️ Detalle no disponible (HTTP {r.status_code}): {qid}")
-        except Exception as e:
-            print(f"[{CITY_NAME}] ❌ Error en consulta HTTP: {e}")
+                detail = ev
+        except Exception:
+            detail = ev
+        id_ = detail.get("id") or "<sin-id>"
+        mag = detail.get("mag") or "<no-mag>"
+        hora = detail.get("hora_utc") or detail.get("time") or "<hora desconocida>"
+        lugar = detail.get("place") or detail.get("place_name") or detail.get("title") or detail.get("zona") or detail.get("reporte") or "<lugar desconocido>"
+        profundidad = detail.get("depth") or detail.get("prof_km") or "<profundidad desconocida>"
+        lat_d = detail.get("lat") or "<lat?>"
+        lon_d = detail.get("lon") or "<lon?>"
+        print(
+            f"[{CITY_NAME}] ✅ Sismo relevante a {d:.1f} km: {id_} — magnitud {mag}, hora UTC {hora}, lugar: {lugar}, profundidad: {profundidad} km, coordenadas: {lat_d},{lon_d}.",
+            flush=True,
+        )
+        try:
+            httpx.post(f"{HTTP_BASE}/regions/report", json={
+                "region": CITY_NAME,
+                "status": "interest",
+                "quake": detail,
+            }, timeout=3.0)
+        except Exception:
+            pass
     else:
-        print(f"[{CITY_NAME}] Ignorado (dist={d:.1f} km > {UMBRAL_KM} km)")
+        print(f"[{CITY_NAME}] Sismo ignorado (distancia={d:.1f} km > {UMBRAL_KM} km) de magnitud {ev.get('mag','<no-mag>')}")
+        try:
+            httpx.post(f"{HTTP_BASE}/regions/report", json={
+                "region": CITY_NAME,
+                "status": "ignored",
+                "quake": ev,
+            }, timeout=3.0)
+        except Exception:
+            pass
 
     ch.basic_ack(delivery_tag=method.delivery_tag)
 
@@ -84,7 +103,6 @@ if __name__ == "__main__":
         raise SystemExit(f"[{CITY_NAME}] ❌ No se pudo conectar a RabbitMQ")
 
     ch = conn.channel()
-    # fanout para broadcast de sismos
     ch.exchange_declare(exchange=EXCHANGE_NAME, exchange_type="fanout", durable=True)
 
     queue_name = f"quakes.{CITY_NAME.replace(' ','_')}"

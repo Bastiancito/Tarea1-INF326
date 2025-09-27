@@ -1,8 +1,9 @@
 FROM python:3.11-slim
 
 WORKDIR /app
-COPY main.py /app/main.py
-COPY requirements.txt /app/requirements.txt
+COPY services/api/main.py /app/main.py
+COPY services/api/requirements.txt /app/requirements.txt
+COPY messaging /app/messaging
 
 RUN apt-get update \
 	&& apt-get install -y --no-install-recommends wget \

@@ -13,7 +13,9 @@ services:
       retries: 20
 
   api:
-    build: ./services/api
+    build:
+      context: .
+      dockerfile: ./services/api/Dockerfile
     container_name: api
     ports:
       - "8000:8000"
