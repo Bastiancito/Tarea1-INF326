@@ -1,8 +1,8 @@
 ## Tarea 1- INF326 - “Arquitectura de Software” 
 Autores
-* Bastían Camus
+* Bastían Camus 202173013-3
 * Esteban Castillo
-* Matías Fernández 
+* Matías Fernández 202173108-3
 ## Instrucciones ejecución de tarea:
 
 1-Se deben buildear las imagenes de docker:
